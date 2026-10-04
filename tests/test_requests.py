@@ -2182,6 +2182,13 @@ class TestRequests:
         next(it)
         assert len(list(it)) == 3
 
+    def test_iter_lines_accepts_chunk_size_none(self):
+        response = requests.Response()
+        response._content = b"alpha\nbeta\n"
+        response._content_consumed = True
+
+        assert list(response.iter_lines(chunk_size=None)) == [b"alpha", b"beta"]
+
     def test_response_context_manager(self, httpbin):
         with requests.get(httpbin("stream/4"), stream=True) as response:
             assert isinstance(response, requests.Response)
