@@ -15,6 +15,7 @@ from requests.cookies import RequestsCookieJar
 from requests.structures import CaseInsensitiveDict
 from requests.utils import (
     _parse_content_type_header,
+    _proxy_override_matches,
     add_dict_to_cookiejar,
     address_in_network,
     dotted_netmask,
@@ -791,6 +792,23 @@ def test_should_bypass_proxies_pass_only_hostname(url, expected):
     with mock.patch("requests.utils.proxy_bypass") as proxy_bypass:
         should_bypass_proxies(url, no_proxy=None)
         proxy_bypass.assert_called_once_with(expected)
+
+
+@pytest.mark.parametrize(
+    ("host", "pattern", "expected"),
+    (
+        ("google.com", "google.com", True),
+        ("google.com.evil.com", "google.com", False),
+        ("Google.COM", "google.com", True),
+        ("a.example.net", "*.example.net", True),
+        ("example.net.evil.com", "*.example.net", False),
+        ("abc", "a?c", True),
+        ("localhost", "<local>", True),
+        ("example.com", "<local>", False),
+    ),
+)
+def test_proxy_override_matches(host, pattern, expected):
+    assert _proxy_override_matches(host, pattern) is expected
 
 
 @pytest.mark.parametrize(

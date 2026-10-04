@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import codecs
 import contextlib
+import fnmatch
 import io
 import os
 import re
@@ -93,6 +94,19 @@ DEFAULT_ACCEPT_ENCODING: Final = ", ".join(
 )
 
 
+def _proxy_override_matches(host: str, pattern: str) -> bool:
+    """Return True if ``host`` matches one Windows ProxyOverride pattern.
+
+    Patterns follow :func:`fnmatch.fnmatch`: ``*`` and ``?`` are globs, and the
+    match is anchored at both ends. Comparison is case-insensitive, matching
+    CPython's ``urllib.request.proxy_bypass_registry``. ``<local>`` matches any
+    host that does not contain a dot.
+    """
+    if pattern == "<local>":
+        return "." not in host
+    return fnmatch.fnmatch(host.casefold(), pattern.casefold())
+
+
 if sys.platform == "win32":
     # provide a proxy_bypass version on Windows without DNS lookups
 
@@ -120,17 +134,11 @@ if sys.platform == "win32":
         # '<local>' string by the localhost entry and the corresponding
         # canonical entry.
         proxyOverride = proxyOverride.split(";")
-        # filter out empty strings to avoid re.match return true in the following code.
+        # filter out empty strings so a blank override entry is ignored.
         proxyOverride = filter(None, proxyOverride)
         # now check if we match one of the registry values.
         for test in proxyOverride:
-            if test == "<local>":
-                if "." not in host:
-                    return True
-            test = test.replace(".", r"\.")  # mask dots
-            test = test.replace("*", r".*")  # change glob sequence
-            test = test.replace("?", r".")  # change glob char
-            if re.match(test, host, re.I):
+            if _proxy_override_matches(host, test):
                 return True
         return False
 
