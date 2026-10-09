@@ -63,6 +63,13 @@ class TestSuperLen:
         assert super_len(stream()) == 0
         assert super_len(stream(value)) == 4
 
+    @pytest.mark.parametrize("shape", [None, [2, 2]])
+    def test_super_len_counts_memoryview_bytes(self, shape):
+        # 2026-10-09: Typed views report elements from len(), not bytes.
+        data = b"abcdefghijklmnop"
+        view = memoryview(data).cast("I", **({"shape": shape} if shape else {}))
+        assert super_len(view) == len(data)
+
     def test_super_len_correctly_calculates_len_of_partially_read_file(self):
         """Ensure that we handle partially consumed file like objects."""
         s = StringIO.StringIO()

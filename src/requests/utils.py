@@ -166,7 +166,10 @@ def super_len(o: Any) -> int:
         # of latin-1 (iso-8859-1) like http.client.
         o = o.encode("utf-8")
 
-    if hasattr(o, "__len__"):
+    # 2026-10-09: Content-Length counts bytes for typed and multidimensional views.
+    if isinstance(o, memoryview):
+        total_length = o.nbytes
+    elif hasattr(o, "__len__"):
         total_length = len(o)
 
     elif hasattr(o, "len"):

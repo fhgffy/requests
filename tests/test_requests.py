@@ -3084,6 +3084,19 @@ def test_content_length_for_string_data_counts_bytes(httpbin):
     assert p.headers["Content-Length"] == length
 
 
+@pytest.mark.parametrize("shape", [None, [2, 2]])
+def test_content_length_for_typed_memoryview_data(httpbin, shape):
+    # 2026-10-09: The server must receive the entire buffer, not its element count.
+    data = b"abcdefghijklmnop"
+    view = memoryview(data).cast("I", **({"shape": shape} if shape else {}))
+    prepared = requests.Request("POST", httpbin("post"), data=view).prepare()
+    with requests.Session() as session:
+        response = session.send(prepared, timeout=5)
+    assert response.status_code == 200
+    assert response.json()["data"] == data.decode("ascii")
+    assert prepared.headers["Content-Length"] == str(len(data))
+
+
 def test_json_decode_errors_are_serializable_deserializable():
     json_decode_error = requests.exceptions.JSONDecodeError(
         "Extra data",
